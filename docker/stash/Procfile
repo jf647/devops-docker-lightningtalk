@@ -1,0 +1,1 @@
+stash: /usr/bin/docker run -h stash -v /srv/stash:/opt/stash-home:rw stash:2.7.0
