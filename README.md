@@ -9,8 +9,8 @@ You will need to have [Virtualbox](http://www.virtualbox.org) and [Vagrant](http
 The Vagrantfile references four boxes:
 
 * build_docker, which takes the nightly Ubuntu 12.04 Vagrant Image, adds Chef, then uses Chef to turn the box into a Docker server
-* build_registry, which iterates upon build_docker to run a private Docker registry container
 * docker, which is the output of build_docker
+* build_registry, which iterates the docker box to produce a private docker registry server
 * registry, which is the output of build_registry
 
 You could take the Ubuntu image and manually tweak it in Virtualbox to your liking, then export it as a Vagrant box, but I wanted to showcase using devops techniques to rebuild the images at will.
@@ -23,20 +23,20 @@ From a cloned version of this repo, run
 
 When complete, export the build to a box and add it to your local Vagrant repository:
 
-    vagrant package build_docker --out ubuntu-docker.box
-    vagrant box add ubuntu-docker ubuntu-docker.box
-    rm ubuntu-docker.box
+    vagrant package build_docker --out docker.box
+    vagrant box add docker docker.box
+    rm docker.box
     vagrant destroy build_docker
 
 Next, iterate the docker box to build the registry box:
 
     vagrant up build_registry
-    vagrant package build_registry --out ubuntu-docker-registry.box
-    vagrant box add ubuntu-docker-registry ubuntu-docker-registry.box
-    rm ubuntu-docker-registry.box
+    vagrant package build_registry --out docker-registry.box
+    vagrant box add docker-registry docker-registry.box
+    rm docker-registry.box
     vagrant destroy build_registry
 
-Then run the vagrant host and the registry host by running:
+Then run the registry and vagrant hosts by running:
 
     vagrant up registry
     vagrant up docker
@@ -44,6 +44,8 @@ Then run the vagrant host and the registry host by running:
 And get a login shell on the docker machine by running:
 
     vagrant ssh docker
+
+_Note that the vagrant host does not persist the images you build - if you want them to last beyond the life of the Vagrant box, push them to the private repo (which is persisted to the Vagrant host in the directory 'registry')_
 
 Several example docker builds have been provided; find them in /vagrant/docker.
 
@@ -57,11 +59,13 @@ While you can build a docker image manually, a Dockerfile makes the process easi
 
 When complete, a build is assigned a UUID.  The first few characters can be used to identify it unambiguously, much like a git commit.
 
-If you plan on building another image from this one, you should tag it so that it's easier to identify in subsequent Dockerfiles.
+If you plan on iterating an image, you should tag it so that it's easier to identify in subsequent Dockerfiles.
 
     docker tag UUID repository [tag]
 
-Repository is a bit of a misnomer - it's a namespace.  Don't use slashes in the repository, otherwise it will think that you want to push the image to your "homedir" on the public docker repo.  I tend to use dashes to separate words (e.g. 'my-ubuntu' rather than 'my/ubuntu')
+Repository is a bit of a misnomer - it's more like the name of the image.  If the name includes a slash (i.e. jf647/ubuntu), it will be interpreted as a two-part name - namespace and image name.  This is used when you push images to the public docker registry (http://index.docker.io).
+
+I have found that for local and private registry use, names with dashes work best (i.e. my-ubuntu).
 
 The tag is optional, and if not specified will be replaced by 'latest'.  When referencing images, put the tag after a colon (e.g. 'my-ubuntu:20130827').
 
@@ -101,13 +105,13 @@ Installs openjdk 7.  Note that we have to use --no-install-recommends, otherwise
 
 Installs Atlassian Stash and configures it to start on boot via supervisord.
 
-Because Docker images are ephemeral, in order to persist the Stash repositories, you have to bind mount a filesystem when starting this image.  Stash also requires that it be able to resolve its hostname, so we pass a fixed hostname using -h:
+Because Docker images are ephemeral, you have to bind mount a filesystem in order to persist the Stash repositories.  Stash also requires that it be able to resolve its hostname, so we pass a fixed hostname using -h:
 
     /usr/bin/docker run -h stash -v /srv/stash:/opt/stash-home:rw stash:2.7.0
 
 #### chef-client < my-ubuntu [B]
 
-This installs chef-client, which you could then iterate on to use cookbooks instead of multiple RUN commands to provision boxes.  I haven't expanded upon this example because native integration with the major devops provisioning system is a key goal to get Docker to 1.0, so expect this to be easier in the future
+This installs chef-client, which you could then iterate on to use cookbooks instead of multiple RUN commands to provision boxes.  I haven't expanded upon this example because native integration with the major devops provisioning system is a key goal to get Docker to 1.0, so expect this to be easier in the future.
 
 #### ruby < nginx [B]
 

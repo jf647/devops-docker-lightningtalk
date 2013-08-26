@@ -43,8 +43,7 @@ Vagrant.configure("2") do |config|
             vb.customize ["modifyvm", :id, "--memory", "2048"]
         end
         v.vm.network :private_network, ip: "192.168.50.20"
-        # uncommenting this will allow the images stored in the registry to persist
-        # through a 'vagrant destroy'.  Without it, they only survive a 'vagrant halt'
+        # allow the images stored in the registry to persist through a 'vagrant destroy'
         v.vm.synced_folder "registry", "/srv/registry"
     end
 
