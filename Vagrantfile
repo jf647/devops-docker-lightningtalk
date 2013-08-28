@@ -24,7 +24,7 @@ Vagrant.configure("2") do |config|
     end
 
     config.vm.define :docker do |v|
-        v.vm.box = 'ubuntu-docker'
+        v.vm.box = 'docker'
         v.vm.hostname = 'docker.vagrant'
         v.vm.provider :virtualbox do |vb|
             vb.customize ["modifyvm", :id, "--memory", "4096"]
@@ -37,7 +37,7 @@ Vagrant.configure("2") do |config|
     end
 
     config.vm.define :registry do |v|
-        v.vm.box = 'ubuntu-docker-registry'
+        v.vm.box = 'docker-registry'
         v.vm.hostname = 'registry.vagrant'
         v.vm.provider :virtualbox do |vb|
             vb.customize ["modifyvm", :id, "--memory", "2048"]
