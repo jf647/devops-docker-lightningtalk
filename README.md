@@ -45,9 +45,9 @@ And get a login shell on the docker machine by running:
 
     vagrant ssh docker
 
-_Note that the vagrant host does not persist the images you build - if you want them to last beyond the life of the Vagrant box, push them to the private repo (which is persisted to the Vagrant host in the directory 'registry')_
+_Note that the Vagrant host does not persist the images you build_:if you want them to last beyond the life of the Vagrant box, push them to the private repo, then only do a 'docker halt' on the registry box
 
-Several example docker builds have been provided; find them in /vagrant/docker.
+Earlier versions of this repo attempted to share the 'registry' folder into the registry virtual machine using Vagrant shared folders, then bind mount that folder to the registry container.  Unfortunately, it appears that docker can only bind mount real filesystems, not ones that are themselves network mounts.
 
 ## Building Docker Images
 
@@ -63,6 +63,10 @@ If you plan on iterating an image, you should tag it so that it's easier to iden
 
     docker tag UUID repository [tag]
 
+You can also apply a tag automatically when a build completes successfully:
+
+    docker build -t tag .
+
 Repository is a bit of a misnomer - it's more like the name of the image.  If the name includes a slash (i.e. jf647/ubuntu), it will be interpreted as a two-part name - namespace and image name.  This is used when you push images to the public docker registry (http://index.docker.io).
 
 I have found that for local and private registry use, names with dashes work best (i.e. my-ubuntu).
@@ -70,10 +74,6 @@ I have found that for local and private registry use, names with dashes work bes
 The tag is optional, and if not specified will be replaced by 'latest'.  When referencing images, put the tag after a colon (e.g. 'my-ubuntu:20130827').
 
 When starting a container from an image, if you leave off the tag then Docker will look for the tag 'latest'.
-
-You can also apply a tag automatically when a build completes successfully:
-
-    docker build -t tag .
 
 ### Builds included in this repo
 
@@ -108,6 +108,13 @@ Installs Atlassian Stash and configures it to start on boot via supervisord.
 Because Docker images are ephemeral, you have to bind mount a filesystem in order to persist the Stash repositories.  Stash also requires that it be able to resolve its hostname, so we pass a fixed hostname using -h:
 
     /usr/bin/docker run -h stash -v /srv/stash:/opt/stash-home:rw stash:2.7.0
+
+Like the registry, the stash data will persist only for the lifetime of the Vagrant box - so if you store real data there, be sure to use 'vagrant halt' rather than 'vagrant destroy' or your data will be lost.
+
+Note that to be compatible with the Procfile, this image has to be tagged with '2.7.0' rather than 'latest'.  Stash updates frequently, so by the time you use this 2.7.1 or higher may be out.  You can see how easy it is to upgrade the software in a container by the new version, tagging it appropriately, then swapping the running container by running something like this:
+
+    docker stop `docker ps | grep stash | grep 2.7.0 | awk '{print $1}'`
+    docker run -h stash -v /srv/stash:/opt/stash-home:rw stash:2.7.1
 
 #### chef-client < my-ubuntu [B]
 
@@ -165,17 +172,17 @@ Anyone can push a Docker image to the public registry server at https://index.do
 
 Tag a build with a name that includes a remote host, then push it:
 
-    docker tag 192.168.50.20:5000/gollum gollum
-    docker push 192.168.50.20:5000/gollum
+    docker tag registry:5000/gollum gollum
+    docker push registry:5000/gollum
 
-The registry server built above has a private network at 192.168.50.20 (the docker host is on .10)
+The registry server built above has a private network at 192.168.50.20 (the docker host is on .10).  Host aliases of 'docker' and 'registry' are also available.
 
 The registry stores layers, just like Docker does.  It knows how to skip layers it already has when you push a derived image:
 
-    vagrant@docker:/vagrant/docker/buildessential$ docker push 192.168.50.20:5000/buildessential
-    The push refers to a repository [192.168.50.20:5000/buildessential] (len: 1)
+    vagrant@docker:/vagrant/docker/buildessential$ docker push registry:5000/buildessential
+    The push refers to a repository [registry:5000/buildessential] (len: 1)
     Sending image list
-    Pushing repository 192.168.50.20:5000/buildessential (1 tags)
+    Pushing repository registry:5000/buildessential (1 tags)
     Image 8dbd9e392a964056420e5d58ca5cc376ef18e2de93b5cc90e868a1bbc8318c1c already pushed, skipping
     Image 7225e4b92fb6e469a1b62e5a2c016a94ebd46dee9dd12da0597a1e59982e9cea already pushed, skipping
     Image 94f8ae3137d6753db7a10fc2602b7c9ce32b94bfa88412bcd372d5633606e8cb already pushed, skipping
@@ -187,7 +194,7 @@ The registry stores layers, just like Docker does.  It knows how to skip layers 
 
 ### Pulling Images from the Private Registry
 
-    docker pull 192.168.50.20:5000/gollum
+    docker pull registry:5000/gollum
 
 ## Further Reading
 

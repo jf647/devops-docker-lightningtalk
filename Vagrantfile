@@ -12,12 +12,13 @@ Vagrant.configure("2") do |config|
             chef.add_recipe 'apt'
             chef.add_recipe 'devopstalk::setup_stash'
             chef.add_recipe 'devopstalk::setup_gollum'
+            chef.add_recipe 'devopstalk::add_intnet_hosts'
             chef.add_recipe 'devopstalk::docker'
         end
     end
 
     config.vm.define :build_registry do |v|
-        v.vm.box = 'ubuntu-docker'
+        v.vm.box = 'docker'
         v.vm.provision :chef_solo do |chef|
             chef.add_recipe 'devopstalk::registry'
         end
@@ -43,8 +44,6 @@ Vagrant.configure("2") do |config|
             vb.customize ["modifyvm", :id, "--memory", "2048"]
         end
         v.vm.network :private_network, ip: "192.168.50.20"
-        # allow the images stored in the registry to persist through a 'vagrant destroy'
-        v.vm.synced_folder "registry", "/srv/registry"
     end
 
 end
