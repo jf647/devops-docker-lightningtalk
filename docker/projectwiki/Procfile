@@ -1,0 +1,1 @@
+gollum: /usr/bin/docker run -p 10001:10001 -v /srv/projectwiki:/wiki.git:rw projectwiki
